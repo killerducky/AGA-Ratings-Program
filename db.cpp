@@ -84,9 +84,9 @@ bool databaseConnection::makeConnection() {
 //	return db.connect("database", "host", "user", "password") &&
 //			ratingsdb.connect("database", "host", "user", "password");
 
-	return db.connect(usgo_agagd_database, usgo_agagd_server, usgo_agagd_user, usgo_agagd_password) 
-		&& ratingsdb.connect(ratings_database, ratings_server, ratings_user, ratings_password)
-		&& membersdb.connect(members_database, members_server, members_user, members_password);
+return db.connect(usgo_agagd_database, usgo_agagd_server, usgo_agagd_user, usgo_agagd_password) 
+	&& ratingsdb.connect(ratings_database, ratings_server, ratings_user, ratings_password)
+	&& membersdb.connect(members_database, members_server, members_user, members_password);
 
 //	return db.connect("usgo_agagd", "localhost", "root", "Burcan**") && ratingsdb.connect("usgo", "localhost", "root", "Burcan**");
 }

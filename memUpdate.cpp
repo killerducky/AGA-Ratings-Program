@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <mysql++/mysql++.h>
+#include "db_passwords.h"
 
 using namespace std;
 
@@ -8,8 +9,8 @@ int main() {
  	mysqlpp::Connection db;
  	mysqlpp::Connection ratingsdb;
 
-	db.connect("usgo_agagd", "dosaku.ctipc.com", "usgo_agagd", "sE9Uqd2xGUmCdpzF");
-	ratingsdb.connect("usgo", "mysql1.ctipc.com", "usgo_ratings", "9V8Smw2WsLTtJm8A");
+	db.connect(usgo_agagd_database, usgo_agagd_server, usgo_agagd_user, usgo_agagd_password);
+	ratingsdb.connect(ratings_database, ratings_server, ratings_user, ratings_password);
 
 	mysqlpp::Query query1 = db.query("select concat(last_Name,', ',Name) as name, pin_player as id, MType as mtype, Club as chapter, State_Code as state, MExp as expiry from players where pin_player!=0;");	
 	mysqlpp::StoreQueryResult res = query1.store();

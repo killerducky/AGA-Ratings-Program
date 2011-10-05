@@ -1,0 +1,9 @@
+db_passwords.h
+basicrate
+bayrate
+check
+copyMembership
+syncDBs
+nodb_GSLSimplex
+*.o
+

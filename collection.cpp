@@ -76,6 +76,7 @@ collection::collection(void)
 	
 	// Emit messages?
 	quiet = false;
+	verbose = 0;
 
 	fdfiterations = 0;
 	simplexiterations = 0;
@@ -291,6 +292,9 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 		z = (playerIt->second.rating - playerIt->second.seed)/playerIt->second.sigma;
 
 		gsl_vector_set(df, playerIt->second.index, -z/playerIt->second.sigma);	
+		if (verbose > 0 && playerIt->second.index == 1) {
+		cout << "sigma contri = " << -z/playerIt->second.sigma << endl;
+	}
 	}
 
 	// Calculate the game contribution.
@@ -299,9 +303,13 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 		if ( (playerHash.find(gameIt->white) == playerHash.end()) || (playerHash.find(gameIt->black) == playerHash.end()) ) {
 			cout << "Error: game record involves player with no corresponding entry in player list" << endl;
 			exit(1);
-		}  
+		}
 					
 		rd = playerHash[gameIt->white].rating - playerHash[gameIt->black].rating - gameIt->handicapeqv;
+
+	// Limit rd to a reasonable maximum
+	// This prevents df from going to infinity
+	if (rd > 9) { rd = 9; }
 
 		// Add in the appropriate contribution
 		if (gameIt->whiteWins) {
@@ -312,6 +320,8 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 
 			temp = gsl_vector_get(df, playerHash[gameIt->black].index);
 			gsl_vector_set(df, playerHash[gameIt->black].index, -dp + temp);
+
+	if (verbose>0) { cout << "w+ game contri = " << dp << endl; }
 		}
 		else {
 			dp = 1/gameIt->sigma_px * sqrt(2.0/PI) * exp(-rd*rd/(2.0*gameIt->sigma_px*gameIt->sigma_px)) / gsl_sf_erfc(rd/(sqrt(2.0)*gameIt->sigma_px));
@@ -321,8 +331,16 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 
 			temp = gsl_vector_get(df, playerHash[gameIt->black].index);			
 			gsl_vector_set(df, playerHash[gameIt->black].index, dp + temp);
+
+	if (verbose>0) { cout << "w- game contri = " << dp << endl; }
 		}
 	}
+	cout << "pt_df";
+	cout << " v[0]=" << gsl_vector_get(v, 0);
+	cout << " v[1]=" << gsl_vector_get(v, 1);
+	cout << " df[0]=" << gsl_vector_get(df, 0);
+	cout << " df[1]=" << gsl_vector_get(df, 1);
+	cout << endl;
 
 	return 0;
 }
@@ -340,7 +358,8 @@ the program prints an error message and fails.
 
 *****************************************************************/
 int collection::calc_ratings() {
-	const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex;
+	//const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex;
+	const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex2;
 	gsl_multimin_fminimizer *s = NULL;
 	gsl_vector *ss, *x;
 	gsl_multimin_function minex_func;
@@ -394,7 +413,10 @@ int collection::calc_ratings() {
 		status = gsl_multimin_test_size (size, 0.00001);
 
 		if (!quiet) {
-			cout << "Iteration " << iter << "\tf() = " << s->fval << "\tsimplex size = " << size << endl;
+			cout << "Iteration " << iter << "\tf() = " << s->fval << "\tsimplex size = " << size;
+			cout << " " << gsl_vector_get (gsl_multimin_fminimizer_x(s), 0);
+			cout << " " << gsl_vector_get (gsl_multimin_fminimizer_x(s), 1);
+			cout << endl;
 		}
 	} while ( (status == GSL_CONTINUE) && ( iter <= 1000000) );
 
@@ -452,6 +474,10 @@ happens to be exactly correct, which makes 'easy' test cases a little more diffi
 int collection::calc_ratings_fdf() {
 	int status, iter=0;
 	const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_vector_bfgs2;	
+	//const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_fr;	
+	//const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_pr;	
+	//const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_steepest_descent;
+
 	gsl_multimin_fdfminimizer *s;
 	gsl_vector *x;
 	gsl_multimin_function_fdf minex_func;
@@ -507,9 +533,13 @@ int collection::calc_ratings_fdf() {
 		status = gsl_multimin_test_gradient (s->gradient, 0.001);
 		
 		if (!quiet) {
-			cout << "Finished iteration " << iter << "\tf() = " << gsl_multimin_fdfminimizer_minimum(s) << "\tnorm = " << gsl_blas_dnrm2(gsl_multimin_fdfminimizer_gradient(s)) << "\tStatus = " << status << endl;
-		}
+			cout << "Finished iteration " << iter << "\tf() = " << gsl_multimin_fdfminimizer_minimum(s) << "\tnorm = " << gsl_blas_dnrm2(gsl_multimin_fdfminimizer_gradient(s)) << "\tStatus = " << status;
+			cout << " " << gsl_vector_get (gsl_multimin_fdfminimizer_x(s), 0);
+			cout << " " << gsl_vector_get (gsl_multimin_fdfminimizer_x(s), 1);
+			cout << endl;
+			
 	} while ((status == GSL_CONTINUE) && (iter < 10000));
+	//} while ((status == GSL_CONTINUE) && (iter < 3));
 
 	if (status == GSL_SUCCESS) {
 		if (!quiet) {

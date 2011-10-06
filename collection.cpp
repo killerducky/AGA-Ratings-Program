@@ -77,6 +77,7 @@ collection::collection(void)
 	// Emit messages?
 	quiet = false;
 	verbose = 0;
+	rd_reduce = false;
 
 	fdfiterations = 0;
 	simplexiterations = 0;
@@ -237,7 +238,13 @@ double collection::calc_pt(const gsl_vector *v) {
 
 	for (playerIt=playerHash.begin(); playerIt!=playerHash.end(); playerIt++) {
 		playerIt->second.rating = gsl_vector_get(v, playerIt->second.index);
-		z = (playerIt->second.rating - playerIt->second.seed)/playerIt->second.sigma;
+		rd = playerIt->second.rating - playerIt->second.seed;
+		if (rd_reduce) {
+			// experimenting to try to avoid +nan/-nan errors
+			if (rd > 9.0) { rd = 9.0 + (rd-9.0)/100.0; }
+			if (rd < -9.0) { rd = -9.0 + (rd+9.0)/100.0; }
+		}
+		z = (rd)/playerIt->second.sigma;
 
 		pt += -z*z/2 - 0.5 * log(2*PI);
 	}
@@ -249,6 +256,11 @@ double collection::calc_pt(const gsl_vector *v) {
 		}  
 		
 		rd = playerHash[gameIt->white].rating - playerHash[gameIt->black].rating - gameIt->handicapeqv;
+		if (rd_reduce) {
+			// experimenting to try to avoid +nan/-nan errors
+			if (rd > 9.0) { rd = 9.0 + (rd-9.0)/100.0; }
+			if (rd < -9.0) { rd = -9.0 + (rd+9.0)/100.0; }
+		}
 
 		if (gameIt->whiteWins) {
 			p = gsl_sf_log_erfc(-rd/gameIt->sigma_px/sqrt(2.0)) - log(2.0);
@@ -289,7 +301,14 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 	// Calculate the player contribution to the likelihood
 	for (playerIt=playerHash.begin(); playerIt!=playerHash.end(); playerIt++) {
 		playerIt->second.rating = gsl_vector_get(v, playerIt->second.index);
-		z = (playerIt->second.rating - playerIt->second.seed)/playerIt->second.sigma;
+		rd = playerIt->second.rating - playerIt->second.seed;
+		if (rd_reduce) {
+			// experimenting to try to avoid +nan/-nan errors
+			if (rd > 9.0) { rd = 9.0 + (rd-9.0)/100.0; }
+			if (rd < -9.0) { rd = -9.0 + (rd+9.0)/100.0; }
+		}
+
+		z = (rd)/playerIt->second.sigma;
 
 		gsl_vector_set(df, playerIt->second.index, -z/playerIt->second.sigma);	
 		if (verbose > 0 && playerIt->second.index == 1) {
@@ -307,9 +326,11 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 					
 		rd = playerHash[gameIt->white].rating - playerHash[gameIt->black].rating - gameIt->handicapeqv;
 
-		// Limit rd to a reasonable maximum
-		// This prevents df from going to infinity
-		if (rd > 9) { rd = 9; }
+		if (rd_reduce) {
+			// experimenting to try to avoid +nan/-nan errors
+			if (rd > 9.0) { rd = 9.0 + (rd-9.0)/100.0; }
+			if (rd < -9.0) { rd = -9.0 + (rd+9.0)/100.0; }
+		}
 
 		// Add in the appropriate contribution
 		if (gameIt->whiteWins) {
@@ -360,6 +381,7 @@ the program prints an error message and fails.
 int collection::calc_ratings() {
 	//const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex;
 	const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex2;
+	//const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex2rand;  seemed worse then simplex2 by a bit
 	gsl_multimin_fminimizer *s = NULL;
 	gsl_vector *ss, *x;
 	gsl_multimin_function minex_func;
@@ -413,9 +435,12 @@ int collection::calc_ratings() {
 		status = gsl_multimin_test_size (size, 0.00001);
 
 		if (!quiet) {
-			cout << "Iteration " << iter << "\tf() = " << s->fval << "\tsimplex size = " << size;
-			cout << " " << gsl_vector_get (gsl_multimin_fminimizer_x(s), 0);
-			cout << " " << gsl_vector_get (gsl_multimin_fminimizer_x(s), 1);
+			cout << "Iteration " << iter << "\tf() = " << s->fval;
+			printf ("%8.4f", gsl_vector_get (gsl_multimin_fminimizer_x(s), 0));
+			printf ("%8.4f", gsl_vector_get (gsl_multimin_fminimizer_x(s), 1));
+			printf ("%8.4f", gsl_vector_get (gsl_multimin_fminimizer_x(s), 2));
+			printf ("%8.4f", gsl_vector_get (gsl_multimin_fminimizer_x(s), 3));
+			cout << " simplex size = " << size;
 			cout << endl;
 		}
 	} while ( (status == GSL_CONTINUE) && ( iter <= 1000000) );
@@ -473,9 +498,9 @@ happens to be exactly correct, which makes 'easy' test cases a little more diffi
 
 int collection::calc_ratings_fdf() {
 	int status, iter=0;
-	const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_vector_bfgs2;	
-	//const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_fr;	
-	//const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_pr;	
+	const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_vector_bfgs2;
+	//const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_fr;
+	//const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_conjugate_pr;
 	//const gsl_multimin_fdfminimizer_type *T = gsl_multimin_fdfminimizer_steepest_descent;
 
 	gsl_multimin_fdfminimizer *s;

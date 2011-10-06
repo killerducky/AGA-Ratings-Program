@@ -65,7 +65,8 @@ private:
 	const gsl_rng_type *T;
 	gsl_rng *r;
 	bool quiet;
-    int  verbose;
+	bool rd_reduce;
+	int  verbose;
 	int  fdfiterations;
 	int  simplexiterations;
 };

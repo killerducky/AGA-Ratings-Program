@@ -293,8 +293,8 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 
 		gsl_vector_set(df, playerIt->second.index, -z/playerIt->second.sigma);	
 		if (verbose > 0 && playerIt->second.index == 1) {
-		cout << "sigma contri = " << -z/playerIt->second.sigma << endl;
-	}
+			cout << "sigma contri = " << -z/playerIt->second.sigma << endl;
+		}
 	}
 
 	// Calculate the game contribution.
@@ -307,9 +307,9 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 					
 		rd = playerHash[gameIt->white].rating - playerHash[gameIt->black].rating - gameIt->handicapeqv;
 
-	// Limit rd to a reasonable maximum
-	// This prevents df from going to infinity
-	if (rd > 9) { rd = 9; }
+		// Limit rd to a reasonable maximum
+		// This prevents df from going to infinity
+		if (rd > 9) { rd = 9; }
 
 		// Add in the appropriate contribution
 		if (gameIt->whiteWins) {
@@ -321,7 +321,7 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 			temp = gsl_vector_get(df, playerHash[gameIt->black].index);
 			gsl_vector_set(df, playerHash[gameIt->black].index, -dp + temp);
 
-	if (verbose>0) { cout << "w+ game contri = " << dp << endl; }
+			if (verbose>0) { cout << "w+ game contri = " << dp << endl; }
 		}
 		else {
 			dp = 1/gameIt->sigma_px * sqrt(2.0/PI) * exp(-rd*rd/(2.0*gameIt->sigma_px*gameIt->sigma_px)) / gsl_sf_erfc(rd/(sqrt(2.0)*gameIt->sigma_px));
@@ -332,7 +332,7 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 			temp = gsl_vector_get(df, playerHash[gameIt->black].index);			
 			gsl_vector_set(df, playerHash[gameIt->black].index, dp + temp);
 
-	if (verbose>0) { cout << "w- game contri = " << dp << endl; }
+			if (verbose>0) { cout << "w- game contri = " << dp << endl; }
 		}
 	}
 	cout << "pt_df";
@@ -537,6 +537,7 @@ int collection::calc_ratings_fdf() {
 			cout << " " << gsl_vector_get (gsl_multimin_fdfminimizer_x(s), 0);
 			cout << " " << gsl_vector_get (gsl_multimin_fdfminimizer_x(s), 1);
 			cout << endl;
+		}
 			
 	} while ((status == GSL_CONTINUE) && (iter < 10000));
 	//} while ((status == GSL_CONTINUE) && (iter < 3));

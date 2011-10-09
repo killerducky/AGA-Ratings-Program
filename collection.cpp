@@ -311,7 +311,7 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 		z = (rd)/playerIt->second.sigma;
 
 		gsl_vector_set(df, playerIt->second.index, -z/playerIt->second.sigma);	
-		if (verbose > 0 && playerIt->second.index == 1) {
+		if (verbose > 1 && playerIt->second.index == 1) {
 			cout << "sigma contri = " << -z/playerIt->second.sigma << endl;
 		}
 	}
@@ -334,7 +334,7 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 
 		// Add in the appropriate contribution
 		if (gameIt->whiteWins) {
-			dp = 1/gameIt->sigma_px * sqrt(2.0/PI) * exp(-rd*rd/(2.0*gameIt->sigma_px*gameIt->sigma_px)) / gsl_sf_erfc(-rd/(sqrt(2.0)*gameIt->sigma_px));
+			dp = 1/gameIt->sigma_px * sqrt(2.0/PI) * exp(-rd*rd/(2.0*gameIt->sigma_px*gameIt->sigma_px) - gsl_sf_log_erfc(-rd/(sqrt(2.0)*gameIt->sigma_px)));
 
 			temp = gsl_vector_get(df, playerHash[gameIt->white].index);
 			gsl_vector_set(df, playerHash[gameIt->white].index, dp + temp);
@@ -342,10 +342,10 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 			temp = gsl_vector_get(df, playerHash[gameIt->black].index);
 			gsl_vector_set(df, playerHash[gameIt->black].index, -dp + temp);
 
-			if (verbose>0) { cout << "w+ game contri = " << dp << endl; }
+			if (verbose>1) { cout << "w+ game contri = " << dp << endl; }
 		}
 		else {
-			dp = 1/gameIt->sigma_px * sqrt(2.0/PI) * exp(-rd*rd/(2.0*gameIt->sigma_px*gameIt->sigma_px)) / gsl_sf_erfc(rd/(sqrt(2.0)*gameIt->sigma_px));
+			dp = 1/gameIt->sigma_px * sqrt(2.0/PI) * exp(-rd*rd/(2.0*gameIt->sigma_px*gameIt->sigma_px) - gsl_sf_log_erfc(rd/(sqrt(2.0)*gameIt->sigma_px)));
 
 			temp = gsl_vector_get(df, playerHash[gameIt->white].index);
 			gsl_vector_set(df, playerHash[gameIt->white].index, -dp + temp);
@@ -353,15 +353,16 @@ double collection::calc_pt_df(const gsl_vector *v, gsl_vector *df) {
 			temp = gsl_vector_get(df, playerHash[gameIt->black].index);			
 			gsl_vector_set(df, playerHash[gameIt->black].index, dp + temp);
 
-			if (verbose>0) { cout << "w- game contri = " << dp << endl; }
+			if (verbose>1) { cout << "w- game contri = " << dp << endl; }
 		}
 	}
-	cout << "pt_df";
-	cout << " v[0]=" << gsl_vector_get(v, 0);
-	cout << " v[1]=" << gsl_vector_get(v, 1);
-	cout << " df[0]=" << gsl_vector_get(df, 0);
-	cout << " df[1]=" << gsl_vector_get(df, 1);
-	cout << endl;
+	if (verbose>0) {
+		cout << "pt_df\n";
+		for (int i=0; i<playerHash.size(); i++) {
+			printf(" i=%d v=%f df=%f\n", i, gsl_vector_get(v, i), gsl_vector_get(df, i));
+		}
+		cout << endl;
+	}
 
 	return 0;
 }
@@ -422,6 +423,8 @@ int collection::calc_ratings() {
 	s = gsl_multimin_fminimizer_alloc (T, playerHash.size());
 	
 	gsl_multimin_fminimizer_set (s, &minex_func, x, ss);
+
+	printf ("size(ss)=%d size(s)=%d\n", sizeof(ss), sizeof(s));
 
 	do {
 		iter++;
@@ -555,12 +558,15 @@ int collection::calc_ratings_fdf() {
 			break;
 		}
 		
-		status = gsl_multimin_test_gradient (s->gradient, 0.001);
+		//status = gsl_multimin_test_gradient (s->gradient, 0.001);
+		status = gsl_multimin_test_gradient (s->gradient, 0.01);
 		
 		if (!quiet) {
-			cout << "Finished iteration " << iter << "\tf() = " << gsl_multimin_fdfminimizer_minimum(s) << "\tnorm = " << gsl_blas_dnrm2(gsl_multimin_fdfminimizer_gradient(s)) << "\tStatus = " << status;
-			cout << " " << gsl_vector_get (gsl_multimin_fdfminimizer_x(s), 0);
-			cout << " " << gsl_vector_get (gsl_multimin_fdfminimizer_x(s), 1);
+			printf ("Finished iteration %4d f()=%10.2f norm=%10.2f Status=%2d", 
+			  iter, gsl_multimin_fdfminimizer_minimum(s), gsl_blas_dnrm2(gsl_multimin_fdfminimizer_gradient(s)), status);
+			for (int i=0; i < playerHash.size(); i++) {
+				printf (" %10.5f", gsl_vector_get (gsl_multimin_fdfminimizer_x(s), i));
+			}
 			cout << endl;
 		}
 			

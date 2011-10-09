@@ -90,14 +90,12 @@ int main(void) {
 	}
 
 	// Run the faster algorithm first; use the slower one as a backup.
-	//if (c.calc_ratings_fdf() != 0) {
-	if (false) {
+	if (c.calc_ratings_fdf() != 0) {
+	//if (false) {
 		cout << "fdf failed" << endl;
 		c.calc_ratings();
 	} else {
 		cout << "fdf success" << endl;
-		c.playerHash = map<int, player> (ph);
-		c.calc_ratings();
 	}
 
 	for (map<int, player>::iterator It = c.playerHash.begin(); It != c.playerHash.end(); It++) {
